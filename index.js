@@ -10,25 +10,35 @@ function initMap() {
     map = new google.maps.Map(document.getElementById('map'), {
         zoom: 6,
         center: {
-            lat: 41.85,
-            lng: -87.65
-        }
+            lat: 32.930501,
+            lng: -97.019639
+        },
     });
+    setMarkers();
     directionsDisplay.setMap(map);
-    marker = new google.maps.Marker({
-        position: new google.maps.LatLng(32.930501, -97.019639),
-        icon: 'http://s7.postimg.org/wg6bu3jpj/pointer.png',
-        map: map
-    });
     calculateAndDisplayRoute(directionsService, directionsDisplay);
 }
 
+function setMarkers(params) {
+    var image = 'https://developers.google.com/maps/documentation/javascript/examples/full/images/beachflag.png';
+    var beachMarker = new google.maps.Marker({
+        position: {
+            lat: 32.930501,
+            lng: -97.019639
+        },
+        map: map,
+        icon: image
+    });
+}
+
 function calculateAndDisplayRoute(directionsService, directionsDisplay) {
+
     var waypts = [{
         location: ' 32.927496, -97.010303',
         stopover: true
     },];
-    directionsService.route({
+
+    const drivingData = {
         origin: {
             lat: 32.930501,
             lng: -97.019639
@@ -41,15 +51,22 @@ function calculateAndDisplayRoute(directionsService, directionsDisplay) {
         waypoints: waypts,
         optimizeWaypoints: true,
         travelMode: google.maps.TravelMode.DRIVING
-    }, function (response, status) {
+    }
+    /* *
+    *  directionsService.route
+    */
+    directionsService.route(drivingData, (response, status) => {
+        console.log('RESPONSE', response, map);
+
         if (status === google.maps.DirectionsStatus.OK) {
             directionsDisplay.setOptions({
                 directions: response,
+                suppressMarkers: true
             })
-            var route = response.routes[0];
-            renderDirectionsPolylines(response, map);
+            // var route = response.routes[0];
+            renderDirectionsPolylines(response, directionsDisplay);
         } else {
-            window.alert('Directions request failed due to ' + status);
+            console.error('There is an error with the request!!!')
         }
     });
 
@@ -68,30 +85,31 @@ var polylines = [];
 function renderDirectionsPolylines(response) {
     var bounds = new google.maps.LatLngBounds();
 
-    for (var i = 0; i < polylines.length; i++) {
-        polylines[i].setMap(null);
-    }
+    polylines.forEach(polyline => {
+        console.log('RUN', polyline);
+        polyline.setMap(null);
+    });
+
     var legs = response.routes[0].legs;
-    for (i = 0; i < legs.length; i++) {
-        var steps = legs[i].steps;
-        for (j = 0; j < steps.length; j++) {
+
+    // Get Polyline
+    legs.forEach((leg, i) => {
+        var steps = leg.steps
+        steps.forEach((element, j) => {
+
             var nextSegment = steps[j].path;
             var stepPolyline = new google.maps.Polyline(polylineOptions);
+
             stepPolyline.setOptions({
-                strokeColor: colors[i]
+                strokeColor: colors[i],
+                strokeOpacity: 5.0,
+                fillColor: "red",
+                fillOpacity: 0.4
             })
             for (k = 0; k < nextSegment.length; k++) {
                 stepPolyline.getPath().push(nextSegment[k]);
                 bounds.extend(nextSegment[k]);
             }
-
-            // var image = 'https://developers.google.com/maps/documentation/javascript/examples/full/images/beachflag.png';
-            // var beachMarker = new google.maps.Marker({
-            //     position: { lat: -33.890, lng: 151.274 },
-            //     map: map,
-            //     icon: image
-            // });
-            // bounds.extend(beachMarker);
 
             polylines.push(stepPolyline);
             stepPolyline.setMap(map);
@@ -100,8 +118,34 @@ function renderDirectionsPolylines(response) {
                 infowindow.setContent("you clicked on the route<br>" + evt.latLng.toUrlValue(6));
                 infowindow.setPosition(evt.latLng);
                 infowindow.open(map);
-            })
-        }
-    }
+            });
+
+        });
+    });
+    // for (i = 0; i < legs.length; i++) {
+    //     var steps = legs[i].steps;
+    //     for (j = 0; j < steps.length; j++) {
+    //         var nextSegment = steps[j].path;
+    //         var stepPolyline = new google.maps.Polyline(polylineOptions);
+    //         stepPolyline.setOptions({
+    //             strokeColor: colors[i]
+    //         })
+    //         for (k = 0; k < nextSegment.length; k++) {
+    //             stepPolyline.getPath().push(nextSegment[k]);
+    //             bounds.extend(nextSegment[k]);
+    //         }
+
+    //         polylines.push(stepPolyline);
+    //         stepPolyline.setMap(map);
+    //         // route click listeners, different one on each step
+    //         google.maps.event.addListener(stepPolyline, 'click', function (evt) {
+    //             infowindow.setContent("you clicked on the route<br>" + evt.latLng.toUrlValue(6));
+    //             infowindow.setPosition(evt.latLng);
+    //             infowindow.open(map);
+    //         })
+    //     }
+    // }
     map.fitBounds(bounds);
 }
+
+
